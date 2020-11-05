@@ -133,20 +133,12 @@ DB2 = DB(DB{:,'Filtro'}==1 & DB{:,'period'}<4,:);
 folder = 'graficos2_SEM/';
 mkdir(folder)
 
-co = [100 100 100;
-      0 0 0;
+co = [160 160 160;
       100 100 100;
+      30 30 30;
       0 0 0]/255;
-% co = [186/255 207/255 236/255;
-%     0 118/255 192/255;
-%     241/255 182/255 130/255;
-%     227/255 124/255 29/255];
 
-symbol = {'--','--','-','-'};
-
-% labels = {'Sham-S','Sham-M','FL-S','FL-M'};
-% label_order = 4:-1:1;
-
+symbol = {'-p','-o','-^','-s'};
 variable = 'MeanPSD'; % média já calculada por animal, período e canal
 
 % %calcula a média por animal e período
@@ -173,10 +165,11 @@ for period = 2:3
     y = PSD(idx,:);
     sd = errorbar(idx,:);
     for i = 4:-1:1
-        plot(f,y(i,:),symbol{i},'linew',2,'Color',co(i,:));
+        plot(f,y(i,:),'linew',2,'Color',co(i,:));
         hold on;
-%         plot(f(1:10:end),y(i,1:10:end),symbol{i},'MarkerFaceColor',co(i,:),'MarkerEdgeColor',co(i,:),'MarkerSize',5);
-        patch([f fliplr(f)],[y(i,:)-sd(i,:) fliplr(y(i,:)+sd(i,:))],co(i,:),'FaceAlpha',0.2,'LineStyle','none')
+        plot(f,y(i,:),symbol{i},'MarkerFaceColor',co(i,:),'MarkerEdgeColor',co(i,:),'MarkerSize',3,...
+            'linew',2,'Color',co(i,:));
+%         patch([f fliplr(f)],[y(i,:)-sd(i,:) fliplr(y(i,:)+sd(i,:))],co(i,:),'FaceAlpha',0.2,'LineStyle','none')
     end
     ylabel('Power (mV²/Hz)')
     xlabel('Frequency (Hz)')
@@ -192,7 +185,6 @@ for period = 2:3
     xticks(0:2:12)
     idxf = F>=0 & F<=12;
     ylim([min(min(y(:,idxf)-sd(:,idxf))) max(max(y(:,idxf)+sd(:,idxf)))])
-%     legend(labels(label_order))
     set(gca,'FontSize',16)
     saveas(gcf,[folder 'PSD_deltatheta_Period' num2str(period)],'pdf')
     saveas(gcf,[folder 'PSD_deltatheta_Period' num2str(period)],'jpeg')
@@ -240,8 +232,8 @@ for period = 1
     y = PSD(idx,:);
     sd = errorbar(idx,:);
     for i = 1:2
-        plot(f,y(i,:),symbol{2*i-1},'linew',2,'Color',co(2*i-1,:)); hold on;
-        patch([f fliplr(f)],[y(i,:)-sd(i,:) fliplr(y(i,:)+sd(i,:))],co(2*i-1,:),'FaceAlpha',0.2,'LineStyle','none');
+        plot(f,y(i,:),'linew',2,'Color',co(2*i-1,:)); hold on;
+        patch([f fliplr(f)],[y(i,:)-sd(i,:) fliplr(y(i,:)+sd(i,:))],co(2*i-1,:),'FaceAlpha',0.4,'LineStyle','none');
     end
     ylabel('Power (mV²/Hz)')
     xlabel('Frequency (Hz)')
