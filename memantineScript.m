@@ -126,29 +126,170 @@ clear; clc; close all
 % load DB
 load DBmediaPSD_antesBandasF
 
-DB2 = DB(DB{:,'Filtro'}==1 & DB{:,'period'}<4,:);
-
-% writetable(DB2(:,[1:5 7:12]),'QuantifPower3.xlsx')
-
-folder = 'graficos2_SEM/';
+folder = 'graficos_v3_SEM_WITHsmoothing/';
 mkdir(folder)
 
 co = [100 100 100;
-      0 0 0;
       100 100 100;
+      0 0 0;
       0 0 0]/255;
 % co = [186/255 207/255 236/255;
 %     0 118/255 192/255;
 %     241/255 182/255 130/255;
 %     227/255 124/255 29/255];
 
-symbol = {'--','--','-','-'};
+symbol = {':','-',':','-'};
 
 % labels = {'Sham-S','Sham-M','FL-S','FL-M'};
 % label_order = 4:-1:1;
 
+DB2 = DB(DB{:,'Filtro'}==1 & DB{:,'period'}<4,:);
+
+% writetable(DB2(:,[1:5 7:12]),'QuantifPower3.xlsx')
+
 variable = 'MeanPSD'; % média já calculada por animal, período e canal
 
+% %calcula a média por animal e período
+% PSDbyAnimal = varfun(@(x) mean(x,1),DB2(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','Nrato','period'});
+% ncol=width(PSDbyAnimal);
+% PSDbyGroup = varfun(@(x) mean(x,1),PSDbyAnimal,'InputVariables',ncol,'GroupingVariables',{'grupotto','period'});
+% PSDstd = varfun(@std,PSDbyAnimal,'InputVariables',ncol,'GroupingVariables',{'grupotto','period'});
+
+%calcula a média por grupo e período para período 2 e 3
+PSDbyGroup = varfun(@(x) mean(x,1),DB2(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','period'});
+PSDstd = varfun(@(x) std(x,0,1),DB2(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','period'});
+PSDstd.SEM = PSDstd.Fun_MeanPSD./sqrt(PSDstd.GroupCount);
+% PSDstd.SD = PSDstd.Fun_MeanPSD;
+% %
+
+f = F(F<=59.5 | F>=60.5)';
+PSD = PSDbyGroup.(4)(:,F<=59.5 | F>=60.5);
+errorbar = PSDstd.(5)(:,F<=59.5 | F>=60.5);
+
+for period = 2:3
+    figure(period)
+    set(figure(period),'Position',[1,1,370,263],'PaperOrientation','rotated');
+    idx = PSDbyGroup{:,'period'}==period;
+    y = PSD(idx,:);
+    sd = errorbar(idx,:);
+    for i = 4:-1:1
+        plot(f,smooth(y(i,:)),symbol{i},'linew',2,'Color',co(i,:));
+        hold on;
+%         plot(f(1:10:end),y(i,1:10:end),symbol{i},'MarkerFaceColor',co(i,:),'MarkerEdgeColor',co(i,:),'MarkerSize',5);
+        patch(smooth([f fliplr(f)]),smooth([y(i,:)-sd(i,:) fliplr(y(i,:)+sd(i,:))]),co(i,:),'FaceAlpha',0.2,'LineStyle','none')
+    end
+    ylabel('Power (mV²/Hz)')
+    xlabel('Frequency (Hz)')
+    switch period
+        case 2
+            title('Treatment')
+        case 3
+            title('Pre-ictal')
+    end
+    box off
+    
+    xlim([0 12])
+    xticks(0:2:12)
+    idxf = F>=0 & F<=12;
+    ylim([min(min(y(:,idxf)-sd(:,idxf))) max(max(y(:,idxf)+sd(:,idxf)))])
+%     legend(labels(label_order))
+    set(gca,'FontSize',16)
+    saveas(gcf,[folder 'PSD_deltatheta_Period' num2str(period)],'pdf')
+    saveas(gcf,[folder 'PSD_deltatheta_Period' num2str(period)],'jpeg')
+    
+    
+    xlim([30 150])
+    xticks(40:20:140)
+    idxf = F>=30 & F<=150;
+    ylim([min(min(y(:,idxf)-sd(:,idxf))) max(max(y(:,idxf)+sd(:,idxf)))])
+    set(gca,'FontSize',16)
+    saveas(gcf,[folder 'PSD_gamma_Period' num2str(period)],'pdf')
+    saveas(gcf,[folder 'PSD_gamma_Period' num2str(period)],'jpeg')
+end
+% %
+close all
+DB3=DB2;
+
+idx=find(DB3{:,1}==2);
+DB3(idx,1)=table(ones(length(idx),1));
+
+idx = find(DB3{:,1}==4|DB3{:,1}==3);
+DB3(idx,1)=table(ones(length(idx),1)*3);
+
+clear PSDbyAnimal PSDbyGroup PSDstd
+%calcula a média por animal e período
+% PSDbyAnimal = varfun(@(x) mean(x,1),DB3(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','Nrato','period'});
+% ncol=width(PSDbyAnimal);
+% PSDbyGroup = varfun(@(x) mean(x,1),PSDbyAnimal,'InputVariables',ncol,'GroupingVariables',{'grupotto','period'});
+% PSDstd = varfun(@(x) std(x,0,1),PSDbyAnimal,'InputVariables',ncol,'GroupingVariables',{'grupotto','period'});
+% PSDstd.SEM = PSDstd.Fun_Fun_MeanPSD./sqrt(PSDstd.GroupCount);
+
+%calcula a média por grupo e período para o período 1
+PSDbyGroup = varfun(@(x) mean(x,1),DB3(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','period'});
+PSDstd = varfun(@(x) std(x,0,1),DB3(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','period'});
+PSDstd.SEM = PSDstd.Fun_MeanPSD./sqrt(PSDstd.GroupCount);
+% %
+f = F(F<=59.5 | F>=60.5)';
+PSD = PSDbyGroup.(4)(:,F<=59.5 | F>=60.5);
+errorbar = PSDstd.(5)(:,F<=59.5 | F>=60.5);
+
+for period = 1
+    figure(period)
+    set(figure(period),'Position',[1,1,370,263],'PaperOrientation','rotated');
+    idx = PSDbyGroup{:,'period'}==period;
+    y = PSD(idx,:);
+    sd = errorbar(idx,:);
+    for i = 1:2
+        plot(f,smooth(y(i,:)),symbol{2*i-1},'linew',2,'Color',co(2*i-1,:)); hold on;
+        patch(smooth([f fliplr(f)]),smooth([y(i,:)-sd(i,:) fliplr(y(i,:)+sd(i,:))]),co(2*i-1,:),'FaceAlpha',0.2,'LineStyle','none');
+    end
+    ylabel('Power (mV²/Hz)')
+    xlabel('Frequency (Hz)')
+    title('Basal')
+    box off
+    
+    xlim([0 12])
+    xticks(0:2:12)
+    idxf = F>=0 & F<=12;
+    ylim([min(min(y(:,idxf)-sd(:,idxf))) max(max(y(:,idxf)+sd(:,idxf)))])
+    set(gca,'FontSize',16)
+    saveas(gcf,[folder 'PSD_deltatheta_Period' num2str(period)],'pdf')
+    saveas(gcf,[folder 'PSD_deltatheta_Period' num2str(period)],'jpeg')
+    
+    
+    xlim([30 150])
+    xticks(40:20:140)
+    idxf = F>=30 & F<=150;
+    ylim([min(min(y(:,idxf)-sd(:,idxf))) max(max(y(:,idxf)+sd(:,idxf)))])
+    set(gca,'FontSize',16)
+    saveas(gcf,[folder 'PSD_gamma_Period' num2str(period)],'pdf')
+    saveas(gcf,[folder 'PSD_gamma_Period' num2str(period)],'jpeg')
+end
+
+%%
+folder = 'graficos_v3_SEM_NOsmoothing/';
+mkdir(folder)
+
+co = [100 100 100;
+      100 100 100;
+      0 0 0;
+      0 0 0]/255;
+% co = [186/255 207/255 236/255;
+%     0 118/255 192/255;
+%     241/255 182/255 130/255;
+%     227/255 124/255 29/255];
+
+symbol = {':','-',':','-'};
+
+% labels = {'Sham-S','Sham-M','FL-S','FL-M'};
+% label_order = 4:-1:1;
+
+DB2 = DB(DB{:,'Filtro'}==1 & DB{:,'period'}<4,:);
+
+% writetable(DB2(:,[1:5 7:12]),'QuantifPower3.xlsx')
+
+variable = 'MeanPSD'; % média já calculada por animal, período e canal
+clear PSDbyAnimal PSDbyGroup PSDstd
 % %calcula a média por animal e período
 % PSDbyAnimal = varfun(@(x) mean(x,1),DB2(:,1:6),'InputVariables',variable,'GroupingVariables',{'grupotto','Nrato','period'});
 % ncol=width(PSDbyAnimal);
@@ -265,5 +406,3 @@ for period = 1
     saveas(gcf,[folder 'PSD_gamma_Period' num2str(period)],'pdf')
     saveas(gcf,[folder 'PSD_gamma_Period' num2str(period)],'jpeg')
 end
-
-
